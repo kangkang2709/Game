@@ -10,10 +10,13 @@ import ctu.game.platformer.model.common.GameState;
 @Service
 public class GameStateManager implements InputController.KeyEventListener {
 
-    private GameState currentState = GameState.PLATFORM;
+    private GameState currentState = GameState.HOME;
 
     @Autowired
     private PlatformerSystem platformerSystem;
+
+    @Autowired
+    private HomeSystem homeSystem;
 
     @Autowired
     private VisualNovelSystem visualNovelSystem;
@@ -27,27 +30,56 @@ public class GameStateManager implements InputController.KeyEventListener {
     }
 
     public void update() {
-        if (currentState == GameState.PLATFORM) {
-            platformerSystem.update();
-        } else {
-            visualNovelSystem.update();
+        switch (currentState) {
+            case PLATFORM:
+                platformerSystem.update();
+                break;
+            case VISUAL_NOVEL:
+                visualNovelSystem.update();
+                break;
+            case HOME:
+                homeSystem.update();
+                break;
+            default:
+                // Handle other states
+                break;
         }
     }
 
+
     public void render() {
-        if (currentState == GameState.PLATFORM) {
-            platformerSystem.render();
-        } else {
-            visualNovelSystem.render();
+        switch (currentState) {
+            case PLATFORM:
+                platformerSystem.render();
+                break;
+            case VISUAL_NOVEL:
+                visualNovelSystem.render();
+                break;
+            case HOME:
+                homeSystem.render();
+                break;
+            default:
+                // Handle other states
+                break;
         }
     }
+
 
     @Override
     public void onKeyEvent(int key, int action) {
-        if (currentState == GameState.PLATFORM) {
-            platformerSystem.handleInput(key, action);
-        } else {
-            visualNovelSystem.handleInput(key, action);
+        switch (currentState) {
+            case PLATFORM:
+                platformerSystem.handleInput(key, action);
+                break;
+            case VISUAL_NOVEL:
+                visualNovelSystem.handleInput(key, action);
+                break;
+            case HOME:
+                homeSystem.handleInput(key, action);
+                break;
+            default:
+                // Handle other states
+                break;
         }
     }
 

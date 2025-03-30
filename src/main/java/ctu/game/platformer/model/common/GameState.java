@@ -3,5 +3,7 @@ package ctu.game.platformer.model.common;
 
 public enum GameState {
     PLATFORM,
-    VISUAL_NOVEL
+    VISUAL_NOVEL,
+    HOME,
+    MENU
 }

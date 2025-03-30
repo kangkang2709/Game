@@ -65,9 +65,14 @@ public class GameEngine {
         }
 
         // 3. Thiết lập key callback
-        GLFW.glfwSetKeyCallback(window, (window, key, scancode, action, mods) ->
-                inputController.invoke(window, key, scancode, action, mods)
-        );
+        inputController.initialize(window);
+
+//        GLFW.glfwSetKeyCallback(window, (window, key, scancode, action, mods) ->
+//                inputController.invoke(window, key, scancode, action, mods)
+//        );
+
+
+
 
         // 4. Make context current (phải làm TRƯỚC khi thiết lập VSync)
         GLFW.glfwMakeContextCurrent(window);
@@ -145,6 +150,8 @@ public class GameEngine {
             while (deltaUpdate >= 1) {
                 inputController.update();
                 gameStateManager.update();
+
+
                 updates++;
                 deltaUpdate--;
             }
@@ -153,6 +160,7 @@ public class GameEngine {
             if (deltaRender >= 1) {
                 GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
                 gameStateManager.render();
+
                 GLFW.glfwSwapBuffers(window);
                 frames++;
                 deltaRender--;
