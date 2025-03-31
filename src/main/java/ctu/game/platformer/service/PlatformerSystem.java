@@ -2,6 +2,9 @@ package ctu.game.platformer.service;
 
 import ctu.game.platformer.controller.InputController;
 import ctu.game.platformer.model.common.GameState;
+import ctu.game.platformer.model.level.LevelData;
+import ctu.game.platformer.model.level.LevelManager;
+import ctu.game.platformer.model.level.TransitionPoint;
 import ctu.game.platformer.model.platformer.Player;
 import ctu.game.platformer.model.tilemap.TileMap;
 import ctu.game.platformer.util.AudioManager;
@@ -22,6 +25,10 @@ public class PlatformerSystem {
     private final int screenHeight;
     @Autowired
     private AudioManager audioManager;
+
+    @Autowired
+    private LevelManager levelManager;
+
     @Autowired
     public PlatformerSystem(
             @Lazy GameStateManager gameStateManager,
@@ -42,7 +49,9 @@ public class PlatformerSystem {
     @PostConstruct
     private void init() {
         // Load the map
-        tileMap.loadMap("level1.csv");
+        levelManager.initialize();
+        float[] startPos = levelManager.getPlayerStartPosition();
+        player.setPosition(startPos[0], startPos[1]);
 
         // Register input listener
 
@@ -55,9 +64,23 @@ public class PlatformerSystem {
     public void update() {
         // Update player
         player.update();
-
+        checkLevelTransitions();
     }
+    private void checkLevelTransitions() {
+        String currentLevelId = levelManager.getCurrentLevelId();
+        float playerX = player.getX();
+        float playerY = player.getY();
 
+        LevelData currentLevel = levelManager.getLevelData(currentLevelId);
+        for (TransitionPoint tp : currentLevel.getTransitions().values()) {
+            if (Math.abs(playerX - tp.getX()) < 32 && Math.abs(playerY - tp.getY()) < 32) {
+                levelManager.loadLevel(tp.getTargetLevel());
+                float[] startPos = levelManager.getPlayerStartPosition();
+                player.setPosition(startPos[0], startPos[1]);
+                break;
+            }
+        }
+    }
     public void render() {
         GL11.glPushMatrix();
 

@@ -116,6 +116,12 @@
             <version>3.3.2</version>
             <classifier>natives-windows</classifier> <!-- hoặc linux/macos tùy hệ điều hành -->
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.13.3</version>
+        </dependency>
         <!-- Native libraries for your platform (Windows in this case) -->
     </dependencies>
 

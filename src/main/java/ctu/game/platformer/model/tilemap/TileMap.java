@@ -81,7 +81,7 @@ public class TileMap {
     private MapObject createObject(int type, float x, float y) {
         switch (type) {
             case 1: // item
-                return new MapObject(x, y, 16, 16, "coin", "newMap.csv"); // Set the map filename
+                return new MapObject(x, y, 16, 16, "coin", "level2.csv"); // Set the map filename
             case 2: // Enemy
                 return new MapObject(x, y, 32, 32, "enemy", null);
             default:
