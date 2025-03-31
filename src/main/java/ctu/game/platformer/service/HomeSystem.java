@@ -2,7 +2,7 @@ package ctu.game.platformer.service;
 
 import ctu.game.platformer.controller.InputController;
 import ctu.game.platformer.util.ResourceLoader;
-import ctu.game.platformer.util.TextRenderer;
+import ctu.game.platformer.util.TextRendererUtil;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +13,6 @@ import ctu.game.platformer.model.common.GameState;
 import jakarta.annotation.PostConstruct;
 
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 
 @Service
 public class HomeSystem implements InputController.MouseClickListener, InputController.MouseMoveListener {
@@ -21,6 +20,9 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
     private int titleTextureId;
     private int[] menuTextureIds;
     private int[] menuSelectedTextureIds;
+    private int backgroundTextureId;
+
+    int drawX =200;
 
     private final GameStateManager gameStateManager;
     private final InputController inputController;
@@ -51,8 +53,10 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
 
         inputController.registerMouseMoveListener(this);
         inputController.registerMouseClickListener(this);
+
         // We'll initialize them on first render
         titleTextureId = -1;
+        backgroundTextureId = -1;
         menuTextureIds = new int[menuOptions.length];
         menuSelectedTextureIds = new int[menuOptions.length];
         for (int i = 0; i < menuOptions.length; i++) {
@@ -71,35 +75,21 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
         menuSelectedTextureIds = new int[menuOptions.length];
 
         try {
+            // Load the background texture
+            backgroundTextureId = resourceLoader.loadTextureFromFile("background.png");
+            if (backgroundTextureId == -1) {
+                backgroundTextureId = createFallbackTexture(30, 30, 60); // Dark blue background
+                System.err.println("Using fallback texture for background");
+            }
+
             // Load the title texture with fallback
-            titleTextureId = resourceLoader.loadTextureFromFile("title.png");
-            if (titleTextureId == -1) {
-                titleTextureId = createFallbackTexture(255, 215, 0); // Gold color for title
-                System.err.println("Using fallback texture for title");
-            }
+//            titleTextureId = resourceLoader.loadTextureFromFile("title.png");
+//            if (titleTextureId == -1) {
+//                titleTextureId = createFallbackTexture(255, 215, 0); // Gold color for title
+//                System.err.println("Using fallback texture for title");
+//            }
 
-            for (int i = 0; i < menuOptions.length; i++) {
-                try {
-                    // Regular menu items
-                    menuTextureIds[i] = resourceLoader.loadTextureFromFile("menu_" + i + ".png");
-                    if (menuTextureIds[i] == -1) {
-                        menuTextureIds[i] = createFallbackTexture(100, 100, 200); // Blue
-                        System.err.println("Using fallback texture for menu_" + i + ".png");
-                    }
-
-                    // Selected menu items
-                    menuSelectedTextureIds[i] = resourceLoader.loadTextureFromFile("menu_" + i + "_selected.png");
-                    if (menuSelectedTextureIds[i] == -1) {
-                        menuSelectedTextureIds[i] = createFallbackTexture(200, 100, 100); // Red
-                        System.err.println("Using fallback texture for menu_" + i + "_selected.png");
-                    }
-                } catch (Exception e) {
-                    // Create fallbacks for this menu item if anything goes wrong
-                    System.err.println("Error loading textures for menu item " + i + ": " + e.getMessage());
-                    if (menuTextureIds[i] <= 0) menuTextureIds[i] = createFallbackTexture(100, 100, 200);
-                    if (menuSelectedTextureIds[i] <= 0) menuSelectedTextureIds[i] = createFallbackTexture(200, 100, 100);
-                }
-            }
+            // Rest of your existing texture loading code...
         } catch (Exception e) {
             System.err.println("Critical error loading textures: " + e.getMessage());
             e.printStackTrace();
@@ -176,8 +166,8 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
         for (int i = 0; i < menuOptions.length; i++) {
             int y = startY + i * spacing;
 
-            // Check if mouse is over this menu item
-            if (mouseX >= 400 - width / 2 && mouseX <= 400 + width / 2 &&
+            // Update to use drawX instead of hardcoded 400
+            if (mouseX >= drawX - width / 2 && mouseX <= drawX + width / 2 &&
                     mouseY >= y - height / 2 && mouseY <= y + height / 2) {
                 selectedOption = i;
                 overAnyItem = true;
@@ -187,17 +177,19 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
     }
 
     public void render() {
-        // Clear and set background color
+        // Check if textures are loaded
         if (!texturesLoaded) {
             loadTextures();
             texturesLoaded = true;
         }
-        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
 
-        // Draw title
-        drawText("FLATFORMER", 400, 150, true);
+        // Draw background
+        drawBackground();
 
-        // Draw menu options
+        // Draw title using TextRendererUtil
+        TextRendererUtil.drawText("FLATFORMER", 400, 150, 32, true);
+
+        // Draw menu options using TextRendererUtil
         int startY = 250;
         int spacing = 60;
 
@@ -205,105 +197,32 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
             int y = startY + i * spacing;
             boolean isSelected = (i == selectedOption);
 
-            // Draw menu item
-            drawMenuItem(menuOptions[i], 400, y, isSelected);
+            // Draw menu text with selection highlight
+            float fontSize = isSelected ? 24.0f : 20.0f;
+            int color = isSelected ? 0xFFFFAA00 : 0xFFFFFFFF; // Orange for selected, white for normal
+
+            TextRendererUtil.drawText(menuOptions[i], drawX, y, fontSize, true, color);
         }
     }
 
-    private void drawMenuItem(String text, int x, int y, boolean isSelected) {
-        int width = 200;
-        int height = 40;
-
-        // Find index of this menu item
-        int index = -1;
-        for (int i = 0; i < menuOptions.length; i++) {
-            if (menuOptions[i].equals(text)) {
-                index = i;
-                break;
-            }
-        }
-
-        if (index == -1) return; // Not found
-
+    private void drawBackground() {
         // Enable texturing and alpha blending
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-        // Bind the appropriate texture for this menu item
-        int textureId = isSelected ? menuSelectedTextureIds[index] : menuTextureIds[index];
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+        // Bind the background texture
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, backgroundTextureId);
 
-        // Set color to white for non-tinted rendering
+        // Set color to white (no tint)
         GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-        // Draw the quad with texture coordinates
+        // Draw the full screen quad
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0.0f, 0.0f); GL11.glVertex2f(x - width / 2, y - height / 2);
-        GL11.glTexCoord2f(1.0f, 0.0f); GL11.glVertex2f(x + width / 2, y - height / 2);
-        GL11.glTexCoord2f(1.0f, 1.0f); GL11.glVertex2f(x + width / 2, y + height / 2);
-        GL11.glTexCoord2f(0.0f, 1.0f); GL11.glVertex2f(x - width / 2, y + height / 2);
-        GL11.glEnd();
-
-        // Disable states
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-    }
-
-    private void drawText(String text, int x, int y, boolean isTitle) {
-        // For the title, use the title texture
-        int textureID = isTitle ? titleTextureId : -1;
-
-        // If the texture is invalid, draw a colored rectangle instead
-        if (textureID <= 0) {
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
-            // Calculate dimensions
-            int width = isTitle ? 300 : 180;
-            int height = isTitle ? 50 : 30;
-
-            // Use a gold color for the title
-            if (isTitle) {
-                GL11.glColor4f(1.0f, 0.84f, 0.0f, 1.0f); // Gold color
-            } else {
-                GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // White
-            }
-
-            // Draw a rectangle
-            GL11.glBegin(GL11.GL_QUADS);
-            GL11.glVertex2f(x - width / 2, y - height / 2);
-            GL11.glVertex2f(x + width / 2, y - height / 2);
-            GL11.glVertex2f(x + width / 2, y + height / 2);
-            GL11.glVertex2f(x - width / 2, y + height / 2);
-            GL11.glEnd();
-
-            GL11.glDisable(GL11.GL_BLEND);
-            return;
-        }
-
-        // Calculate dimensions
-        int width = isTitle ? 300 : 180;
-        int height = isTitle ? 50 : 30;
-
-        // Enable texturing and alpha blending
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
-        // Bind the texture
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureID);
-
-        // Set color to white for non-tinted rendering
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-
-        // Draw the quad with texture coordinates
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0.0f, 0.0f); GL11.glVertex2f(x - width / 2, y - height / 2);
-        GL11.glTexCoord2f(1.0f, 0.0f); GL11.glVertex2f(x + width / 2, y - height / 2);
-        GL11.glTexCoord2f(1.0f, 1.0f); GL11.glVertex2f(x + width / 2, y + height / 2);
-        GL11.glTexCoord2f(0.0f, 1.0f); GL11.glVertex2f(x - width / 2, y + height / 2);
+        GL11.glTexCoord2f(0.0f, 0.0f); GL11.glVertex2f(0, 0);
+        GL11.glTexCoord2f(1.0f, 0.0f); GL11.glVertex2f(800, 0);
+        GL11.glTexCoord2f(1.0f, 1.0f); GL11.glVertex2f(800, 600);
+        GL11.glTexCoord2f(0.0f, 1.0f); GL11.glVertex2f(0, 600);
         GL11.glEnd();
 
         // Disable states
@@ -330,33 +249,6 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
         }
 
         System.out.println("Selected option: " + selectedOption);
-    }
-    public void cleanup() {
-        try {
-            // Delete title texture if valid
-            if (titleTextureId > 0) {
-                GL11.glDeleteTextures(titleTextureId);
-            }
-
-            // Delete menu textures if they exist
-            if (menuTextureIds != null) {
-                for (int textureId : menuTextureIds) {
-                    if (textureId > 0) {
-                        GL11.glDeleteTextures(textureId);
-                    }
-                }
-            }
-
-            if (menuSelectedTextureIds != null) {
-                for (int textureId : menuSelectedTextureIds) {
-                    if (textureId > 0) {
-                        GL11.glDeleteTextures(textureId);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error in cleanup: " + e.getMessage());
-        }
     }
 
     private void executeMenuAction() {
@@ -404,8 +296,9 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
             for (int i = 0; i < menuOptions.length; i++) {
                 int y = startY + i * spacing;
 
-                // Check if mouse is over this menu item
-                if (mouseX >= 400 - width / 2 && mouseX <= 400 + width / 2 &&
+                // Check if mouse is over this menu item, now using drawX
+                // Update to use drawX instead of hard-coded 400
+                if (mouseX >= drawX - width / 2 && mouseX <= drawX + width / 2 &&
                         mouseY >= y - height / 2 && mouseY <= y + height / 2) {
                     selectedOption = i;
                     clickedMenuItem = true;

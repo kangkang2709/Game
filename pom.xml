@@ -96,7 +96,17 @@
             <artifactId>lwjgl-nanovg</artifactId>
             <version>3.3.1</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-stb</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.lwjgl</groupId>
+            <artifactId>lwjgl-stb</artifactId>
+            <version>3.3.2</version>
+            <classifier>natives-windows</classifier> <!-- hoặc linux/macos tùy hệ điều hành -->
+        </dependency>
         <!-- Native libraries for your platform (Windows in this case) -->
     </dependencies>
 

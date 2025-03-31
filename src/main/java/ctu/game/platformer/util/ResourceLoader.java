@@ -32,8 +32,18 @@ public class ResourceLoader {
             }
 
             BufferedImage image = ImageIO.read(stream);
+            if (image == null) {
+                System.err.println("ERROR: Failed to read image from: " + resourcePath);
+                return -1;
+            }
 
+            // Generate texture ID
             int textureID = GL11.glGenTextures();
+            if (textureID == 0) {
+                System.err.println("ERROR: Failed to generate texture ID");
+                return -1;
+            }
+
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureID);
 
             ByteBuffer buffer = createByteBuffer(image);
@@ -49,6 +59,11 @@ public class ResourceLoader {
 
             return textureID;
         } catch (IOException e) {
+            System.err.println("ERROR loading texture: " + e.getMessage());
+            e.printStackTrace();
+            return -1;
+        } catch (Exception e) {
+            System.err.println("Unexpected error loading texture: " + e.getMessage());
             e.printStackTrace();
             return -1;
         }
