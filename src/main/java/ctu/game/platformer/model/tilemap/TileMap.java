@@ -1,7 +1,7 @@
 package ctu.game.platformer.model.tilemap;
 
 import ctu.game.platformer.model.common.GameObject;
-import ctu.game.platformer.model.common.Position;
+import jakarta.annotation.PostConstruct;
 import org.lwjgl.opengl.GL11;
 import org.springframework.stereotype.Component;
 
@@ -9,7 +9,9 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class TileMap {
@@ -22,6 +24,15 @@ public class TileMap {
     // Track camera position for culling
     private float cameraX;
     private float cameraY;
+
+    private Map<Integer, Integer> tileTextures = new HashMap<>();
+    private Map<String, Integer> objectTextures = new HashMap<>();
+    private boolean texturesLoaded = false;
+
+    @PostConstruct
+    public void init() {
+
+    }
 
     public void loadMap(String filename) {
         try {
@@ -69,10 +80,10 @@ public class TileMap {
 
     private MapObject createObject(int type, float x, float y) {
         switch (type) {
-            case 1: // Coin
-                return new MapObject(x, y, 16, 16, "coin");
+            case 1: // item
+                return new MapObject(x, y, 16, 16, "coin", "newMap.csv"); // Set the map filename
             case 2: // Enemy
-                return new MapObject(x, y, 32, 32, "enemy");
+                return new MapObject(x, y, 32, 32, "enemy", null);
             default:
                 return null;
         }
@@ -80,8 +91,31 @@ public class TileMap {
 
     public void render(float playerX, float playerY, int screenWidth, int screenHeight) {
         // Update camera position to follow player
+
+        if (!texturesLoaded) {
+            try {
+                // Load textures for tiles
+                tileTextures.put(1, TextureManager.loadTexture("maps/tiles/wall.png"));
+                tileTextures.put(2, TextureManager.loadTexture("maps/tiles/grass.png"));
+                tileTextures.put(3, TextureManager.loadTexture("maps/tiles/dirt.png"));
+                tileTextures.put(4, TextureManager.loadTexture("maps/tiles/water.png"));
+
+                // Load textures for objects
+                objectTextures.put("coin", TextureManager.loadTexture("textures/objects/coin.png"));
+                objectTextures.put("enemy", TextureManager.loadTexture("textures/objects/enemy.png"));
+
+                texturesLoaded = true;
+            } catch (Exception e) {
+                System.err.println("Error initializing textures: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
         cameraX = playerX;
         cameraY = playerY;
+
+        // Check if player reached the specific point to change the map
+        checkPlayerPosition(playerX, playerY);
 
         // Calculate visible area
         int startTileX = Math.max(0, (int)((cameraX - screenWidth/2) / tileSize));
@@ -89,11 +123,15 @@ public class TileMap {
         int startTileY = Math.max(0, (int)((cameraY - screenHeight/2) / tileSize));
         int endTileY = Math.min(mapHeight, (int)((cameraY + screenHeight/2) / tileSize) + 1);
 
+        // Enable texturing
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Reset color to not tint textures
+
         // Render visible tiles
         for (int y = startTileY; y < endTileY; y++) {
             for (int x = startTileX; x < endTileX; x++) {
                 int tileType = mapData[y][x];
-                if (tileType == 0) continue; // Skip empty tiles
+                if (tileType == 0) continue;
 
                 float drawX = x * tileSize;
                 float drawY = y * tileSize;
@@ -124,35 +162,56 @@ public class TileMap {
                 }
             }
         }
+
+        // Disable texturing when done
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+    }
+
+    private void checkPlayerPosition(float playerX, float playerY) {
+        for (MapObject obj : objects) {
+            // Check if player collides with the specific object type (e.g., "coin")
+            if ("coin".equals(obj.getType()) &&
+                    Math.abs(playerX - obj.getX()) < tileSize &&
+                    Math.abs(playerY - obj.getY()) < tileSize) {
+                // Load the corresponding map
+                loadMap(obj.getMapFilename());
+                break;
+            }
+        }
     }
 
     private void renderTile(int tileType, float x, float y) {
-        // Set color based on tile type
-        switch (tileType) {
-            case 1: // Wall
-                GL11.glColor3f(0.5f, 0.5f, 0.5f); // Gray
-                break;
-            case 2: // Grass
-                GL11.glColor3f(0.0f, 0.8f, 0.0f); // Green
-                break;
-            case 3: // Dirt
-                GL11.glColor3f(0.6f, 0.3f, 0.0f); // Brown
-                break;
-            case 4: // Water
-                GL11.glColor3f(0.0f, 0.0f, 0.8f); // Blue
-                break;
-            default:
-                GL11.glColor3f(1.0f, 1.0f, 1.0f); // White
+        // Bind the appropriate texture based on tile type
+        Integer textureId = tileTextures.get(tileType);
+        if (textureId != null) {
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+        } else {
+            // Fallback to colored rectangles if texture not found
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            switch (tileType) {
+                case 1: GL11.glColor3f(0.5f, 0.5f, 0.5f); break; // Gray
+                case 2: GL11.glColor3f(0.0f, 0.8f, 0.0f); break; // Green
+                case 3: GL11.glColor3f(0.6f, 0.3f, 0.0f); break; // Brown
+                case 4: GL11.glColor3f(0.0f, 0.0f, 0.8f); break; // Blue
+                default: GL11.glColor3f(1.0f, 1.0f, 1.0f); // White
+            }
         }
 
-        // Draw tile
+        // Draw tile as a textured quad
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glVertex2f(x, y);
-        GL11.glVertex2f(x + tileSize, y);
-        GL11.glVertex2f(x + tileSize, y + tileSize);
-        GL11.glVertex2f(x, y + tileSize);
+        GL11.glTexCoord2f(0, 0); GL11.glVertex2f(x, y);
+        GL11.glTexCoord2f(1, 0); GL11.glVertex2f(x + tileSize, y);
+        GL11.glTexCoord2f(1, 1); GL11.glVertex2f(x + tileSize, y + tileSize);
+        GL11.glTexCoord2f(0, 1); GL11.glVertex2f(x, y + tileSize);
         GL11.glEnd();
+
+        // Re-enable texturing if it was disabled
+        if (textureId == null) {
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glColor3f(1.0f, 1.0f, 1.0f); // Reset color
+        }
     }
+
     private void renderCollisionBox(float x, float y, float width, float height) {
         // Save current color
         float[] currentColor = new float[4];
@@ -171,21 +230,35 @@ public class TileMap {
         // Restore previous color
         GL11.glColor4f(currentColor[0], currentColor[1], currentColor[2], currentColor[3]);
     }
+
     private void renderObject(MapObject obj) {
-        // Set color based on object type
-        if ("coin".equals(obj.getType())) {
-            GL11.glColor3f(1.0f, 1.0f, 0.0f); // Yellow
-        } else if ("enemy".equals(obj.getType())) {
-            GL11.glColor3f(1.0f, 0.0f, 0.0f); // Red
+        // Bind the appropriate texture based on object type
+        Integer textureId = objectTextures.get(obj.getType());
+        if (textureId != null) {
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+        } else {
+            // Fallback to colored rectangles if texture not found
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            if ("coin".equals(obj.getType())) {
+                GL11.glColor3f(1.0f, 1.0f, 0.0f); // Yellow
+            } else if ("enemy".equals(obj.getType())) {
+                GL11.glColor3f(1.0f, 0.0f, 0.0f); // Red
+            }
         }
 
-        // Draw object
+        // Draw object as a textured quad
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glVertex2f(obj.getX(), obj.getY());
-        GL11.glVertex2f(obj.getX() + obj.getWidth(), obj.getY());
-        GL11.glVertex2f(obj.getX() + obj.getWidth(), obj.getY() + obj.getHeight());
-        GL11.glVertex2f(obj.getX(), obj.getY() + obj.getHeight());
+        GL11.glTexCoord2f(0, 0); GL11.glVertex2f(obj.getX(), obj.getY());
+        GL11.glTexCoord2f(1, 0); GL11.glVertex2f(obj.getX() + obj.getWidth(), obj.getY());
+        GL11.glTexCoord2f(1, 1); GL11.glVertex2f(obj.getX() + obj.getWidth(), obj.getY() + obj.getHeight());
+        GL11.glTexCoord2f(0, 1); GL11.glVertex2f(obj.getX(), obj.getY() + obj.getHeight());
         GL11.glEnd();
+
+        // Re-enable texturing if it was disabled
+        if (textureId == null) {
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glColor3f(1.0f, 1.0f, 1.0f); // Reset color
+        }
     }
 
     public boolean isSolid(float x, float y) {
@@ -214,6 +287,7 @@ public class TileMap {
     public int getMapHeight() {
         return mapHeight;
     }
+
     public void toggleCollisionView() {
         showCollision = !showCollision;
     }
