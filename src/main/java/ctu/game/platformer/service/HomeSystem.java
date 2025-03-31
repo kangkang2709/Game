@@ -1,8 +1,10 @@
 package ctu.game.platformer.service;
 
 import ctu.game.platformer.controller.InputController;
+import ctu.game.platformer.util.AudioManager;
 import ctu.game.platformer.util.ResourceLoader;
 import ctu.game.platformer.util.TextRendererUtil;
+import jakarta.annotation.PreDestroy;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,9 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
     private int backgroundTextureId;
 
     int drawX =200;
+
+    @Autowired
+    private AudioManager audioManager;
 
     private final GameStateManager gameStateManager;
     private final InputController inputController;
@@ -64,10 +69,52 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
             menuSelectedTextureIds[i] = -1;
         }
 
-
+        audioManager.initialize();
+        audioManager.loadBackgroundMusic("background.wav");
+        audioManager.playBackgroundMusic();
+//        audioManager.setVolume(0.3f); // 0.0 (silent) to 1.0 (full)
 
     }
     private boolean texturesLoaded = false;
+    @PreDestroy
+    private void cleanup() {
+        releaseResources();
+    }
+    private void releaseResources() {
+        if (texturesLoaded) {
+            System.out.println("Releasing HomeSystem resources");
+
+            // Stop audio
+            audioManager.stopBackgroundMusic();
+
+            // Delete textures
+            if (backgroundTextureId > 0) {
+                GL11.glDeleteTextures(backgroundTextureId);
+                backgroundTextureId = -1;
+            }
+
+            if (titleTextureId > 0) {
+                GL11.glDeleteTextures(titleTextureId);
+                titleTextureId = -1;
+            }
+
+            // Delete menu textures
+            for (int i = 0; i < menuTextureIds.length; i++) {
+                if (menuTextureIds[i] > 0) {
+                    GL11.glDeleteTextures(menuTextureIds[i]);
+                    menuTextureIds[i] = -1;
+                }
+
+                if (menuSelectedTextureIds[i] > 0) {
+                    GL11.glDeleteTextures(menuSelectedTextureIds[i]);
+                    menuSelectedTextureIds[i] = -1;
+                }
+            }
+
+            // Reset state
+            texturesLoaded = false;
+        }
+    }
 
     private void loadTextures() {
         // Initialize arrays first
@@ -257,6 +304,7 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
             case 0:
                 System.out.println("Switching to PLATFORM state...");
                 gameStateManager.switchState(GameState.PLATFORM);
+                releaseResources();
                 break;
             case 1:
                 System.out.println("Switching to PLATFORM state...");
