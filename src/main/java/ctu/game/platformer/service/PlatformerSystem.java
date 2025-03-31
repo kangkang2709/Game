@@ -35,6 +35,7 @@ public class PlatformerSystem {
         this.screenHeight = windowHeight;
         this.tileMap = tileMap != null ? tileMap : new TileMap();
         this.player = new Player(100, 100, 32, 64);
+
         this.player.setTileMap(this.tileMap);
     }
 
@@ -85,12 +86,10 @@ public class PlatformerSystem {
         }
 
         // Movement controls
-        if (key == GLFW.GLFW_KEY_W) {
-            player.setMovingUp(action == GLFW.GLFW_PRESS);
+        if (key == GLFW.GLFW_KEY_SPACE && action == GLFW.GLFW_PRESS) {
+            player.jump();
         }
-        if (key == GLFW.GLFW_KEY_S) {
-            player.setMovingDown(action == GLFW.GLFW_PRESS);
-        }
+
         if (key == GLFW.GLFW_KEY_A) {
             player.setMovingLeft(action == GLFW.GLFW_PRESS);
         }
