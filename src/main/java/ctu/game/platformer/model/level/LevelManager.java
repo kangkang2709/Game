@@ -93,7 +93,7 @@ public class LevelManager {
 
         try {
             // Load the tile map
-
+            tileMap.switchToLayer(0);
             tileMap.loadMap(levelData.getMapFile());
             tileMap.setBackground(levelData.getBackgroundFilename());
             return true;

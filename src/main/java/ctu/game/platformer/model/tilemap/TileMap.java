@@ -31,6 +31,10 @@ public class TileMap {
     private float cameraY;
     private boolean showCollision = true;
 
+    // camera control
+    private float drawOffsetX = 0;
+    private float drawOffsetY = 0;
+
     // Background
     private String currentBackground = null;
     private int backgroundTextureId = -1;
@@ -141,19 +145,28 @@ public class TileMap {
         if (!texturesLoaded) {
             loadTextures();
         }
+        // Calculate the ideal camera position (centered on player)
+        float idealCameraX = playerX - screenWidth / 2;
+        float idealCameraY = playerY - screenHeight / 2;
 
-        // Update camera for culling
-        cameraX = playerX;
-        cameraY = playerY;
+        // Calculate the maximum allowed camera positions
+        float maxCameraX = mapWidth * TILE_SIZE - screenWidth;
+        float maxCameraY = mapHeight * TILE_SIZE - screenHeight;
 
-        // Draw background
-        renderBackground(playerX, playerY, screenWidth, screenHeight);
+        // Clamp camera within level boundaries
+        cameraX = Math.max(0, Math.min(idealCameraX, maxCameraX));
+        cameraY = Math.max(0, Math.min(idealCameraY, maxCameraY));
 
+        // Calculate draw offsets (how much we need to shift the view)
+        drawOffsetX = cameraX - idealCameraX;
+        drawOffsetY = cameraY - idealCameraY;
+
+        // Rest of your existing render code...
         // Calculate visible area for culling
-        int startTileX = Math.max(0, (int)((cameraX - screenWidth/2) / TILE_SIZE));
-        int endTileX = Math.min(mapWidth, (int)((cameraX + screenWidth/2) / TILE_SIZE) + 2);
-        int startTileY = Math.max(0, (int)((cameraY - screenHeight/2) / TILE_SIZE));
-        int endTileY = Math.min(mapHeight, (int)((cameraY + screenHeight/2) / TILE_SIZE) + 2);
+        int startTileX = Math.max(0, (int)(cameraX / TILE_SIZE));
+        int endTileX = Math.min(mapWidth, (int)((cameraX + screenWidth) / TILE_SIZE) + 1);
+        int startTileY = Math.max(0, (int)(cameraY / TILE_SIZE));
+        int endTileY = Math.min(mapHeight, (int)((cameraY + screenHeight) / TILE_SIZE) + 1);
 
         // Enable texturing
         GL11.glEnable(GL11.GL_TEXTURE_2D);
@@ -512,5 +525,25 @@ public class TileMap {
 
     public boolean isShowingCollision() {
         return showCollision;
+    }
+
+    public void setMapWidth(int mapWidth) {
+        this.mapWidth = mapWidth;
+    }
+
+    public float getDrawOffsetY() {
+        return drawOffsetY;
+    }
+
+    public void setDrawOffsetY(float drawOffsetY) {
+        this.drawOffsetY = drawOffsetY;
+    }
+
+    public float getDrawOffsetX() {
+        return drawOffsetX;
+    }
+
+    public void setDrawOffsetX(float drawOffsetX) {
+        this.drawOffsetX = drawOffsetX;
     }
 }

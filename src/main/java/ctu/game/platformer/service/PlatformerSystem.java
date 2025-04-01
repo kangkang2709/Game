@@ -92,7 +92,16 @@ public class PlatformerSystem {
         GL11.glPushMatrix();
 
         // Center the view on the player
-        GL11.glTranslatef(screenWidth/2 - player.getX(), screenHeight/2 - player.getY(), 0);
+        float drawOffsetX = tileMap.getDrawOffsetX();
+        float drawOffsetY = tileMap.getDrawOffsetY();
+
+        // Translate the view with the calculated draw offsets
+        // Note the subtraction of offsets instead of addition
+        GL11.glTranslatef(
+                screenWidth/2 - player.getX() - drawOffsetX,
+                screenHeight/2 - player.getY() - drawOffsetY,
+                0
+        );
 
         // Render the tile map with culling
         tileMap.render(player.getX(), player.getY(), screenWidth, screenHeight);
