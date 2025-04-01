@@ -3,7 +3,7 @@
     {
       "id": "level1",
       "mapFile": "level1.csv",
-      "startX": 100,
+      "startX": 200,
       "startY": 100,
       "transitions": {
         "exit": {"x": 400, "y": 400, "targetLevel": "level2"}
@@ -12,8 +12,8 @@
     {
       "id": "level2",
       "mapFile": "level2.csv",
-      "startX": 50,
-      "startY": 50,
+      "startX": 200,
+      "startY": 100,
       "transitions": {}
     }
   ]

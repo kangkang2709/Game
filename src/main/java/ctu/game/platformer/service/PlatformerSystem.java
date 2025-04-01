@@ -23,6 +23,9 @@ public class PlatformerSystem {
     private final TileMap tileMap;
     private final int screenWidth;
     private final int screenHeight;
+
+    private int playerWidth = 32;
+    private int playerHeight = 42;
     @Autowired
     private AudioManager audioManager;
 
@@ -41,7 +44,7 @@ public class PlatformerSystem {
         this.screenWidth = windowWidth;
         this.screenHeight = windowHeight;
         this.tileMap = tileMap != null ? tileMap : new TileMap();
-        this.player = new Player(100, 100, 32, 64);
+        this.player = new Player(100, 100, playerWidth, playerHeight);
 
         this.player.setTileMap(this.tileMap);
     }
@@ -73,7 +76,7 @@ public class PlatformerSystem {
 
         LevelData currentLevel = levelManager.getLevelData(currentLevelId);
         for (TransitionPoint tp : currentLevel.getTransitions().values()) {
-            if (Math.abs(playerX - tp.getX()) < 32 && Math.abs(playerY - tp.getY()) < 32) {
+            if (Math.abs(playerX - tp.getX()) < playerWidth && Math.abs(playerY - tp.getY()) < playerHeight) {
                 levelManager.loadLevel(tp.getTargetLevel());
                 float[] startPos = levelManager.getPlayerStartPosition();
                 player.setPosition(startPos[0], startPos[1]);

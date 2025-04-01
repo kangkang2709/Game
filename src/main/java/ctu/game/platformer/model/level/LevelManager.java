@@ -16,6 +16,7 @@ public class LevelManager {
     private TileMap tileMap;
 
     private Map<String, LevelData> levels = new HashMap<>();
+
     private String currentLevelId;
 
     public void initialize() {

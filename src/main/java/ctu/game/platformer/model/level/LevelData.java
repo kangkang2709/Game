@@ -26,18 +26,43 @@ public class LevelData {
     }
 
     // Getters & Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public String getId() {
+        return id;
+    }
 
-    public String getMapFile() { return mapFile; }
-    public void setMapFile(String mapFile) { this.mapFile = mapFile; }
+    public void setId(String id) {
+        this.id = id;
+    }
 
-    public float getStartX() { return startX; }
-    public void setStartX(float startX) { this.startX = startX; }
+    public String getMapFile() {
+        return mapFile;
+    }
 
-    public float getStartY() { return startY; }
-    public void setStartY(float startY) { this.startY = startY; }
+    public void setMapFile(String mapFile) {
+        this.mapFile = mapFile;
+    }
 
-    public Map<String, TransitionPoint> getTransitions() { return transitions; }
-    public void setTransitions(Map<String, TransitionPoint> transitions) { this.transitions = transitions; }
+    public float getStartX() {
+        return startX;
+    }
+
+    public void setStartX(float startX) {
+        this.startX = startX;
+    }
+
+    public float getStartY() {
+        return startY;
+    }
+
+    public void setStartY(float startY) {
+        this.startY = startY;
+    }
+
+    public Map<String, TransitionPoint> getTransitions() {
+        return transitions;
+    }
+
+    public void setTransitions(Map<String, TransitionPoint> transitions) {
+        this.transitions = transitions;
+    }
 }
