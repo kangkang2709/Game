@@ -68,6 +68,7 @@ public class PlatformerSystem {
         // Update player
         player.update();
         checkLevelTransitions();
+        tileMap.checkPlayerPosition(player.getX(), player.getY());
     }
     private void checkLevelTransitions() {
         String currentLevelId = levelManager.getCurrentLevelId();

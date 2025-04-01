@@ -31,7 +31,11 @@ public class TileMap {
     private int[][][] mapLayers;
     private int layerCount;
     private boolean[] layerVisible;
+    // Add these fields to your TileMap class
 
+    private int currentLayer = 0;
+    private int previousLayer = 0;
+    private Map<Integer, List<MapObject>> layerObjects = new HashMap<>();
 
     private int defaultTextureId = -1;
 
@@ -44,66 +48,130 @@ public class TileMap {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("maps/" + filename);
              BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
 
-            // Đọc kích thước bản đồ và số layer
-            String[] dimensions = reader.readLine().split(",");
+            // Read map dimensions and layer count
+            String dimensionLine = reader.readLine();
+            String[] dimensions = dimensionLine.split(",");
             mapWidth = Integer.parseInt(dimensions[0]);
             mapHeight = Integer.parseInt(dimensions[1]);
-            layerCount = (dimensions.length > 2) ? Integer.parseInt(dimensions[2]) : 1;
+            layerCount = Integer.parseInt(dimensions[2]);
 
-            // Khởi tạo các mảng bản đồ
+            // Initialize map data arrays
             mapLayers = new int[layerCount][mapHeight][mapWidth];
-            mapData = new int[mapHeight][mapWidth]; // Tương thích với code cũ
             layerVisible = new boolean[layerCount];
-            Arrays.fill(layerVisible, true); // Mặc định tất cả layer hiển thị
+            for (int i = 0; i < layerCount; i++) {
+                layerVisible[i] = true;
+            }
 
-            // Đọc dữ liệu từng layer
+            // Reset object collections
+            objects.clear();
+            layerObjects.clear();
+            for (int i = 0; i < layerCount; i++) {
+                layerObjects.put(i, new ArrayList<>());
+            }
+
+            // Read each layer's tile data
             for (int layer = 0; layer < layerCount; layer++) {
                 for (int y = 0; y < mapHeight; y++) {
-                    String[] tiles = reader.readLine().split(",");
-                    for (int x = 0; x < Math.min(mapWidth, tiles.length); x++) {
-                        int tileValue = Integer.parseInt(tiles[x]);
-                        mapLayers[layer][y][x] = tileValue;
+                    String line = reader.readLine();
+                    if (line == null) break;
 
-                        // Tương thích với mapData, chỉ ghi đè nếu cần
-                        if (layer == 0 || (isTileSolid(tileValue) && mapData[y][x] == 0)) {
-                            mapData[y][x] = tileValue;
-                        }
+                    String[] tiles = line.split(",");
+                    for (int x = 0; x < Math.min(mapWidth, tiles.length); x++) {
+                        mapLayers[layer][y][x] = Integer.parseInt(tiles[x]);
                     }
                 }
-                // Bỏ qua dòng trống giữa các layer (nếu có)
+
+                // Skip empty line between layers if not the last layer
                 if (layer < layerCount - 1) {
                     reader.readLine();
                 }
             }
 
-            // Xóa danh sách object cũ trước khi nạp mới
-            objects.clear();
-
-            // Đọc dữ liệu đối tượng (nếu có)
+            // Read objects with layer information
             String line;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
                 if (!line.isEmpty()) {
                     String[] parts = line.split(",");
-                    if (parts.length >= 3) {
+                    if (parts.length >= 4) { // Type, X, Y, Layer
                         int type = Integer.parseInt(parts[0]);
                         float objX = Float.parseFloat(parts[1]);
                         float objY = Float.parseFloat(parts[2]);
+                        int objLayer = Integer.parseInt(parts[3]);
 
                         MapObject obj = createObject(type, objX, objY);
                         if (obj != null) {
                             objects.add(obj);
+
+                            // Add to the specific layer
+                            if (objLayer >= 0 && objLayer < layerCount) {
+                                layerObjects.get(objLayer).add(obj);
+                            } else {
+                                layerObjects.get(0).add(obj); // Default to first layer
+                            }
                         }
                     }
                 }
             }
+
+            System.out.println("Map loaded: " + mapWidth + "x" + mapHeight + " with " + layerCount + " layers");
+            System.out.println("Total object count: " + objects.size());
 
         } catch (Exception e) {
             System.err.println("Error loading map: " + e.getMessage());
             e.printStackTrace();
         }
     }
+    public void switchToLayer(int newLayer) {
+        if (newLayer >= 0 && newLayer < layerCount) {
+            previousLayer = currentLayer;
+            currentLayer = newLayer;
+            System.out.println("Switched from layer " + previousLayer + " to layer " + currentLayer);
+        }
+    }
 
+
+    public void returnToPreviousLayer() {
+        int temp = currentLayer;
+        currentLayer = previousLayer;
+        previousLayer = temp;
+        System.out.println("Returned to layer " + currentLayer);
+    }
+
+
+    public void checkPlayerPosition(float playerX, float playerY) {
+        // Check objects only in the current layer
+        List<MapObject> currentLayerObjects = layerObjects.getOrDefault(currentLayer, Collections.emptyList());
+
+        for (MapObject obj : currentLayerObjects) {
+            // Better collision detection with proper radius
+            float distX = playerX - (obj.getX() + obj.getWidth() / 2);
+            float distY = playerY - (obj.getY() + obj.getHeight() / 2);
+            float distance = (float) Math.sqrt(distX * distX + distY * distY);
+
+            // Collision detected if distance is less than combined radii
+            if (distance < (tileSize / 2 + obj.getWidth() / 2)) {
+                switch (obj.getType()) {
+                    case "layerportal":
+                        int targetLayer = obj.getTargetLayer();
+                        if (targetLayer >= 0 && targetLayer < layerCount) {
+                            switchToLayer(targetLayer);
+                        }
+                        break;
+
+                    case "layerreturn":
+                        returnToPreviousLayer();
+                        break;
+
+                    case "coin":
+                        if (obj.getMapFilename() != null) {
+                            loadMap(obj.getMapFilename());
+                        }
+                        break;
+                }
+            }
+        }
+    }
     private boolean isTileSolid(int tileType) {
         return tileType == 1 || tileType == 4;
     }
@@ -112,13 +180,22 @@ public class TileMap {
             layerVisible[layer] = visible;
         }
     }
-
+    private void renderLayerObjects(int layer) {
+        List<MapObject> objectsToRender = layerObjects.getOrDefault(layer, Collections.emptyList());
+        for (MapObject obj : objectsToRender) {
+            renderObject(obj, obj.getX(), obj.getY());
+        }
+    }
     private MapObject createObject(int type, float x, float y) {
         switch (type) {
-            case 1: // item
-                return new MapObject(x, y, 32, 32, "coin", "level2.csv"); // Set the map filename
+            case 1: // coin/map change item
+                return new MapObject(x, y, 32, 32, "coin", "level2.csv");
             case 2: // Enemy
                 return new MapObject(x, y, 32, 32, "enemy", null);
+            case 3: // Layer portal (go to another layer)
+                return new MapObject(x, y, 32, 32, "layerportal", null, 1); // Target layer 1
+            case 4: // Layer return (go back to previous layer)
+                return new MapObject(x, y, 32, 32, "layerreturn", null);
             default:
                 return null;
         }
@@ -131,7 +208,7 @@ public class TileMap {
 
         try {
             // Load default fallback texture once
-            defaultTextureId = TextureManager.loadTexture("maps/tiles/default.png", true);
+//            defaultTextureId = TextureManager.loadTexture("maps/tiles/default.png", true);
 
             // Batch load all tile textures at once
             Map<String, Integer> tileTextureFiles = new HashMap<>();
@@ -154,7 +231,8 @@ public class TileMap {
             // Batch load object textures
             objectTextures.put("coin", TextureManager.loadTexture("textures/objects/coin.png", true));
             objectTextures.put("enemy", TextureManager.loadTexture("textures/objects/enemy.png", true));
-
+            objectTextures.put("layerportal", TextureManager.loadTexture("textures/objects/layerportal.png", true));
+            objectTextures.put("layerreturn", TextureManager.loadTexture("textures/objects/layerreturn.png", true));
             texturesLoaded = true;
             long endTime = System.currentTimeMillis();
             System.out.println("Textures loaded in " + (endTime - startTime) + "ms");
@@ -164,12 +242,11 @@ public class TileMap {
         }
     }
     public void render(float playerX, float playerY, int screenWidth, int screenHeight) {
-        // Update camera position
         if (!texturesLoaded) {
             loadTextures();
         }
 
-
+        // Update camera position
         cameraX = playerX;
         cameraY = playerY;
 
@@ -183,11 +260,11 @@ public class TileMap {
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-        // Render each layer
-        for (int layer = 0; layer < layerCount; layer++) {
+        // Only render tiles from the current layer
+        if (layerVisible[currentLayer]) {
             for (int y = startTileY; y < endTileY; y++) {
                 for (int x = startTileX; x < endTileX; x++) {
-                    int tileType = mapLayers[layer][y][x];
+                    int tileType = mapLayers[currentLayer][y][x];
                     if (tileType == 0) continue;
 
                     float drawX = x * tileSize;
@@ -195,16 +272,17 @@ public class TileMap {
 
                     renderTile(tileType, drawX, drawY);
 
-                    // Only show collision on the collision layer (typically first layer)
-                    if (showCollision && layer == 0 && isTileSolid(tileType)) {
+                    // Show collision boxes only if enabled
+                    if (showCollision && isTileSolid(tileType)) {
                         renderCollisionBox(drawX, drawY, tileSize, tileSize);
                     }
                 }
             }
         }
 
+        // Only render objects from the current layer
+        renderLayerObjects(currentLayer);
 
-        renderObjects();
         GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 
@@ -214,18 +292,6 @@ public class TileMap {
         }
     }
 
-    private void checkPlayerPosition(float playerX, float playerY) {
-        for (MapObject obj : objects) {
-            // Check if player collides with the specific object type (e.g., "coin")
-            if ("coin".equals(obj.getType()) &&
-                    Math.abs(playerX - obj.getX()) < tileSize &&
-                    Math.abs(playerY - obj.getY()) < tileSize) {
-                // Load the corresponding map
-                loadMap(obj.getMapFilename());
-                break;
-            }
-        }
-    }
     // Add this method to your TileMap class
 
     private Integer getObjectTexture(String objectType) {
@@ -343,10 +409,16 @@ public class TileMap {
             return true; // Out of bounds is solid
         }
 
-        // Look for solid tiles in any layer
-        for (int layer = 0; layer < layerCount; layer++) {
-            int tileType = mapLayers[layer][tileY][tileX];
-            if (isTileSolid(tileType)) {
+        // Check solid tiles in base layer (layer 0)
+        int baseTileType = mapLayers[0][tileY][tileX];
+        if (isTileSolid(baseTileType)) {
+            return true;
+        }
+
+        // Check current layer if different from base
+        if (currentLayer > 0) {
+            int layerTileType = mapLayers[currentLayer][tileY][tileX];
+            if (isTileSolid(layerTileType)) {
                 return true;
             }
         }

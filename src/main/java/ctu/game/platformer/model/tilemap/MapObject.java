@@ -4,66 +4,57 @@ import ctu.game.platformer.model.common.GameObject;
 
 public class MapObject {
     private float x, y;
-    private int width, height;
+    private float width, height;
     private String type;
-    private String mapFilename; // Add this field
+    private String mapFilename;
+    private int targetLayer = -1; // For layer portal objects
 
-    public MapObject(float x, float y, int width, int height, String type, String mapFilename) {
+    public MapObject(float x, float y, float width, float height, String type, String mapFilename) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.type = type;
-        this.mapFilename = mapFilename; // Initialize this field
-    }
-
-    // Getters and setters for the new field
-    public String getMapFilename() {
-        return mapFilename;
-    }
-
-    public void setMapFilename(String mapFilename) {
         this.mapFilename = mapFilename;
     }
 
-    public float getX() {
-        return x;
+    // Add constructor with layer information
+    public MapObject(float x, float y, float width, float height, String type, String mapFilename, int targetLayer) {
+        this(x, y, width, height, type, mapFilename);
+        this.targetLayer = targetLayer;
     }
 
     public void setX(float x) {
         this.x = x;
     }
 
-    public float getY() {
-        return y;
-    }
-
     public void setY(float y) {
         this.y = y;
     }
 
-    public int getWidth() {
-        return width;
-    }
-
-    public void setWidth(int width) {
+    public void setWidth(float width) {
         this.width = width;
     }
 
-    public int getHeight() {
-        return height;
-    }
-
-    public void setHeight(int height) {
+    public void setHeight(float height) {
         this.height = height;
-    }
-
-    public String getType() {
-        return type;
     }
 
     public void setType(String type) {
         this.type = type;
     }
-// Other getters and setters...
+
+    public void setMapFilename(String mapFilename) {
+        this.mapFilename = mapFilename;
+    }
+
+    // Getters and setters
+    public float getX() { return x; }
+    public float getY() { return y; }
+    public float getWidth() { return width; }
+    public float getHeight() { return height; }
+    public String getType() { return type; }
+    public String getMapFilename() { return mapFilename; }
+    public int getTargetLayer() { return targetLayer; }
+    public void setTargetLayer(int targetLayer) { this.targetLayer = targetLayer; }
 }
