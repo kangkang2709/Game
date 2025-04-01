@@ -26,6 +26,15 @@ public class TextureManager {
     }
 
     public static int loadTexture(String path, boolean useCache) {
+        // Skip loading for null or empty paths
+        if ("empty".equals(path)) {
+            return -1;  // Return invalid texture ID for empty tiles
+        }
+
+        if (path == null || path.isEmpty()) {
+            return -1;
+        }
+
         // Check if texture is already in cache
         if (useCache && textureCache.containsKey(path)) {
             return textureCache.get(path);
@@ -108,32 +117,29 @@ public class TextureManager {
     }
 
     private static ByteBuffer readResourceToByteBuffer(String resource) {
-        ByteBuffer buffer = null;
         try (InputStream is = TextureManager.class.getClassLoader().getResourceAsStream(resource)) {
             if (is == null) {
                 System.err.println("Resource not found: " + resource);
                 return null;
             }
 
-            // Get file size
-            int fileSize = is.available();
-            if (fileSize == 0) fileSize = 1024 * 1024; // 1MB default if size unknown
+            // Get initial size estimate
+            int initialSize = Math.max(is.available(), 16 * 1024); // At least 16KB
 
-            // Allocate buffer
-            buffer = BufferUtils.createByteBuffer(fileSize);
+            ByteBuffer buffer = BufferUtils.createByteBuffer(initialSize);
+            ReadableByteChannel rbc = Channels.newChannel(is);
 
-            // Read data
-            try (ReadableByteChannel rbc = Channels.newChannel(is)) {
-                while (true) {
-                    int bytes = rbc.read(buffer);
-                    if (bytes == -1) break;
-                    if (buffer.remaining() == 0) {
-                        // If buffer is too small, resize it
-                        ByteBuffer newBuffer = BufferUtils.createByteBuffer(buffer.capacity() * 2);
-                        buffer.flip();
-                        newBuffer.put(buffer);
-                        buffer = newBuffer;
-                    }
+            while (true) {
+                int bytesRead = rbc.read(buffer);
+                if (bytesRead == -1) break;
+
+                // If buffer is full but there's more data
+                if (buffer.remaining() == 0) {
+                    // Double the buffer size
+                    ByteBuffer newBuffer = BufferUtils.createByteBuffer(buffer.capacity() * 2);
+                    buffer.flip();
+                    newBuffer.put(buffer);
+                    buffer = newBuffer;
                 }
             }
 

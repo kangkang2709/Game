@@ -1,6 +1,8 @@
 package ctu.game.platformer.model.level;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LevelData {
@@ -10,8 +12,14 @@ public class LevelData {
     private float startY;
     private Map<String, TransitionPoint> transitions = new HashMap<>();
 
-    // Default constructor for JSON parsing
-    public LevelData() {
+    private String backgroundFilename;
+
+    public String getBackgroundFilename() {
+        return backgroundFilename;
+    }
+
+    public void setBackgroundFilename(String backgroundFilename) {
+        this.backgroundFilename = backgroundFilename;
     }
 
     public LevelData(String id, String mapFile, float startX, float startY) {
@@ -21,48 +29,28 @@ public class LevelData {
         this.startY = startY;
     }
 
-    public void addTransition(String id, float x, float y, String targetLevel) {
-        transitions.put(id, new TransitionPoint(x, y, targetLevel));
+
+    public void addTransition(String id, TransitionPoint point) {
+        transitions.put(id, point);
     }
 
-    // Getters & Setters
     public String getId() {
         return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public String getMapFile() {
         return mapFile;
     }
 
-    public void setMapFile(String mapFile) {
-        this.mapFile = mapFile;
-    }
-
     public float getStartX() {
         return startX;
-    }
-
-    public void setStartX(float startX) {
-        this.startX = startX;
     }
 
     public float getStartY() {
         return startY;
     }
 
-    public void setStartY(float startY) {
-        this.startY = startY;
-    }
-
     public Map<String, TransitionPoint> getTransitions() {
         return transitions;
-    }
-
-    public void setTransitions(Map<String, TransitionPoint> transitions) {
-        this.transitions = transitions;
     }
 }

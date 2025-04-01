@@ -5,20 +5,7 @@
       "mapFile": "level1.csv",
       "startX": 200,
       "startY": 100,
-      "backgrounds": [
-        {
-          "texturePath": "assets/images/platformer/sky_bg.png",
-          "scrollSpeedX": 0.1,
-          "scrollSpeedY": 0.0,
-          "tiled": true
-        },
-        {
-          "texturePath": "assets/images/platformer/mountains_bg.png",
-          "scrollSpeedX": 0.3,
-          "scrollSpeedY": 0.0,
-          "tiled": true
-        }
-      ],
+      "backgrounds": "sky_bg.png",
       "transitions": {
         "exit": {"x": 400, "y": 400, "targetLevel": "level2"}
       }
@@ -28,20 +15,7 @@
       "mapFile": "level2.csv",
       "startX": 200,
       "startY": 100,
-      "backgrounds": [
-        {
-          "texturePath": "assets/images/platformer/cave_bg.png",
-          "scrollSpeedX": 0.1,
-          "scrollSpeedY": 0.0,
-          "tiled": true
-        },
-        {
-          "texturePath": "assets/images/platformer/stalactites_bg.png",
-          "scrollSpeedX": 0.4,
-          "scrollSpeedY": 0.0,
-          "tiled": true
-        }
-      ],
+      "backgrounds": "sky_bg_2.png",
       "transitions": {}
     }
   ]

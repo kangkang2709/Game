@@ -1,13 +1,19 @@
 package ctu.game.platformer.model.level;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import ctu.game.platformer.model.tilemap.TileMap;
+import ctu.game.platformer.util.ResourceLoader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -15,67 +21,91 @@ public class LevelManager {
     @Autowired
     private TileMap tileMap;
 
-    private Map<String, LevelData> levels = new HashMap<>();
+    @Autowired
+    private ResourceLoader resourceLoader;
 
-    private String currentLevelId;
+    private Map<String, LevelData> levels = new HashMap<>();
+    private String currentLevelId = "level1"; // Default starting level
 
     public void initialize() {
-        try (InputStream inputStream = getClass().getResourceAsStream("/maps/level.json")) {
-            if (inputStream == null) {
-                throw new IOException("Resource not found: /maps/level.json");
+        loadLevelConfig();
+        loadLevel(currentLevelId);
+    }
+
+    private void loadLevelConfig() {
+        try {
+            InputStream is = getClass().getClassLoader().getResourceAsStream("maps/level.json");
+            if (is == null) {
+                throw new RuntimeException("Cannot find level config file");
             }
 
-            ObjectMapper mapper = new ObjectMapper();
-            LevelConfig config = mapper.readValue(inputStream, LevelConfig.class);
+            Gson gson = new Gson();
+            JsonObject config = gson.fromJson(new InputStreamReader(is), JsonObject.class);
+            JsonArray levelsArray = config.getAsJsonArray("levels");
 
-            if (config.getLevels() == null || config.getLevels().isEmpty()) {
-                throw new IOException("No levels found in JSON!");
+            for (JsonElement levelElement : levelsArray) {
+                JsonObject levelObj = levelElement.getAsJsonObject();
+
+                String id = levelObj.get("id").getAsString();
+                String mapFile = levelObj.get("mapFile").getAsString();
+                float startX = levelObj.get("startX").getAsFloat();
+                float startY = levelObj.get("startY").getAsFloat();
+
+                LevelData levelData = new LevelData(id, mapFile, startX, startY);
+
+                // Load backgrounds
+                // Inside loadLevelConfig() method
+                if (levelObj.has("backgrounds")) {
+                    if (levelObj.get("backgrounds").isJsonPrimitive()) {
+                        levelData.setBackgroundFilename(levelObj.get("backgrounds").getAsString());
+                    }
+                }
+
+                // Load transitions
+                if (levelObj.has("transitions")) {
+                    JsonObject transitions = levelObj.getAsJsonObject("transitions");
+                    for (Map.Entry<String, JsonElement> entry : transitions.entrySet()) {
+                        JsonObject tp = entry.getValue().getAsJsonObject();
+                        float x = tp.get("x").getAsFloat();
+                        float y = tp.get("y").getAsFloat();
+                        String targetLevel = tp.get("targetLevel").getAsString();
+
+                        levelData.addTransition(entry.getKey(), new TransitionPoint(x, y, targetLevel));
+                    }
+                }
+
+                levels.put(id, levelData);
             }
-
-            for (LevelData level : config.getLevels()) {
-                levels.put(level.getId(), level);
-            }
-
-            // Set initial level
-            loadLevel(config.getLevels().get(0).getId());
-        } catch (IOException e) {
-            System.err.println("Error loading level data: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error loading level config: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-
-    public void loadLevel(String levelId) {
+    public boolean loadLevel(String levelId) {
         if (!levels.containsKey(levelId)) {
             System.err.println("Level not found: " + levelId);
-            return;
+            return false;
         }
 
-        LevelData level = levels.get(levelId);
-        tileMap.loadMap(level.getMapFile());
+        LevelData levelData = levels.get(levelId);
         currentLevelId = levelId;
-    }
 
-    public void transitionTo(String transitionId) {
-        LevelData currentLevel = levels.get(currentLevelId);
-        TransitionPoint transition = currentLevel.getTransitions().get(transitionId);
-
-        if (transition == null) {
-            System.err.println("Transition point not found: " + transitionId);
-            return;
+        try {
+            // Load the tile map
+            tileMap.loadMap(levelData.getMapFile());
+            tileMap.setBackground(levelData.getBackgroundFilename());
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error loading level: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
-
-        String nextLevelId = transition.getTargetLevel();
-        if (!levels.containsKey(nextLevelId)) {
-            System.err.println("Target level not found: " + nextLevelId);
-            return;
-        }
-
-        loadLevel(nextLevelId);
     }
 
     public float[] getPlayerStartPosition() {
-        LevelData level = levels.get(currentLevelId);
-        return new float[]{level.getStartX(), level.getStartY()};
+        LevelData levelData = levels.get(currentLevelId);
+        return new float[] { levelData.getStartX(), levelData.getStartY() };
     }
 
     public String getCurrentLevelId() {

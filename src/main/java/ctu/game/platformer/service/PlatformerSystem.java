@@ -99,7 +99,6 @@ public class PlatformerSystem {
 
         GL11.glPopMatrix();
     }
-
     public void handleInput(int key, int action) {
         // State change
         if (key == GLFW.GLFW_KEY_V && action == GLFW.GLFW_PRESS) {
@@ -116,7 +115,7 @@ public class PlatformerSystem {
         if (key == GLFW.GLFW_KEY_SPACE && action == GLFW.GLFW_PRESS) {
             player.jump();
         }
-        
+
         if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_PRESS) {
             gameStateManager.pause();
             return;
