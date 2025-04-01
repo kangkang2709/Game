@@ -13,7 +13,7 @@ import java.util.*;
 @Component
 public class TileMap {
     // Constants
-    private static final int TILE_SIZE = 32;
+    private static final int TILE_SIZE = 42;
     private static final float PARALLAX_X = 0.2f;
     private static final float PARALLAX_Y = 0.05f;
 
@@ -34,6 +34,9 @@ public class TileMap {
     // camera control
     private float drawOffsetX = 0;
     private float drawOffsetY = 0;
+    private float prevCameraX = 0;
+    private float prevCameraY = 0;
+    private final float SMOOTHING_FACTOR = 0.1f;
 
     // Background
     private String currentBackground = null;
@@ -145,24 +148,23 @@ public class TileMap {
         if (!texturesLoaded) {
             loadTextures();
         }
-        // Calculate the ideal camera position (centered on player)
-        float idealCameraX = playerX - screenWidth / 2;
-        float idealCameraY = playerY - screenHeight / 2;
-
-        // Calculate the maximum allowed camera positions
+        renderBackground(playerX, playerY, screenWidth, screenHeight);
         float maxCameraX = mapWidth * TILE_SIZE - screenWidth;
         float maxCameraY = mapHeight * TILE_SIZE - screenHeight;
 
-        // Clamp camera within level boundaries
-        cameraX = Math.max(0, Math.min(idealCameraX, maxCameraX));
-        cameraY = Math.max(0, Math.min(idealCameraY, maxCameraY));
+        // Calculate target camera position (without centering player)
+        float targetCameraX = Math.max(0, Math.min(playerX - screenWidth / 4, maxCameraX));
+        float targetCameraY = Math.max(0, Math.min(playerY - screenHeight / 2, maxCameraY));
 
-        // Calculate draw offsets (how much we need to shift the view)
-        drawOffsetX = cameraX - idealCameraX;
-        drawOffsetY = cameraY - idealCameraY;
+        // Apply simple smoothing
+        cameraX = cameraX + (targetCameraX - cameraX) * SMOOTHING_FACTOR;
+        cameraY = cameraY + (targetCameraY - cameraY) * SMOOTHING_FACTOR;
 
-        // Rest of your existing render code...
-        // Calculate visible area for culling
+        // Ensure camera bounds
+        cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
+        cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
+
+        // Calculate visible tiles for culling
         int startTileX = Math.max(0, (int)(cameraX / TILE_SIZE));
         int endTileX = Math.min(mapWidth, (int)((cameraX + screenWidth) / TILE_SIZE) + 1);
         int startTileY = Math.max(0, (int)(cameraY / TILE_SIZE));
@@ -179,6 +181,9 @@ public class TileMap {
         }
 
         GL11.glDisable(GL11.GL_TEXTURE_2D);
+
+        drawOffsetX = cameraX;
+        drawOffsetY = cameraY;
     }
 
     private void renderTiles(int startX, int endX, int startY, int endY) {
