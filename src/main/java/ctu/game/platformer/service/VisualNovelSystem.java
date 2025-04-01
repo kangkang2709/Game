@@ -62,6 +62,9 @@ public class VisualNovelSystem {
                 case GLFW.GLFW_KEY_P:
                     gameStateManager.switchState(GameState.PLATFORM);
                     break;
+                case GLFW.GLFW_KEY_ESCAPE:
+                    gameStateManager.pause();
+                    break;
             }
         }
     }

@@ -5,5 +5,5 @@ public enum GameState {
     PLATFORM,
     VISUAL_NOVEL,
     HOME,
-    MENU
+    PAUSE
 }

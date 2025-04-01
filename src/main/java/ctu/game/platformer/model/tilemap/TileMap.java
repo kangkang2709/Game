@@ -12,12 +12,12 @@ import java.util.*;
 
 @Component
 public class TileMap {
-    private int[][] mapData;
     private int tileSize = 32;
     private int mapWidth;
     private int mapHeight;
 
-    private List<MapObject> objects = new ArrayList<>();
+
+
     private boolean showCollision = true;
     // Track camera position for culling
     private float cameraX;
@@ -35,7 +35,9 @@ public class TileMap {
 
     private int currentLayer = 0;
     private int previousLayer = 0;
+
     private Map<Integer, List<MapObject>> layerObjects = new HashMap<>();
+    private List<MapObject> objects = new ArrayList<>();
 
     private int defaultTextureId = -1;
 
@@ -65,6 +67,7 @@ public class TileMap {
             // Reset object collections
             objects.clear();
             layerObjects.clear();
+
             for (int i = 0; i < layerCount; i++) {
                 layerObjects.put(i, new ArrayList<>());
             }
@@ -175,11 +178,6 @@ public class TileMap {
     private boolean isTileSolid(int tileType) {
         return tileType == 1 || tileType == 4;
     }
-    public void setLayerVisible(int layer, boolean visible) {
-        if (layer >= 0 && layer < layerCount) {
-            layerVisible[layer] = visible;
-        }
-    }
     private void renderLayerObjects(int layer) {
         List<MapObject> objectsToRender = layerObjects.getOrDefault(layer, Collections.emptyList());
         for (MapObject obj : objectsToRender) {
@@ -284,12 +282,6 @@ public class TileMap {
         renderLayerObjects(currentLayer);
 
         GL11.glDisable(GL11.GL_TEXTURE_2D);
-    }
-
-    private void renderObjects() {
-        for (MapObject obj : objects) {
-            renderObject(obj, obj.getX(), obj.getY());
-        }
     }
 
     // Add this method to your TileMap class

@@ -89,10 +89,10 @@ public class InputController implements GLFWKeyCallbackI {
             }
         }
 
-        if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
-            GLFW.glfwSetWindowShouldClose(window, true);
-            return;
-        }
+//        if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
+//            GLFW.glfwSetWindowShouldClose(window, true);
+//            return;
+//        }
 
         notifyKeyEvent(key, action);
     }

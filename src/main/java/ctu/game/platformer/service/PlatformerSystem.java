@@ -116,7 +116,11 @@ public class PlatformerSystem {
         if (key == GLFW.GLFW_KEY_SPACE && action == GLFW.GLFW_PRESS) {
             player.jump();
         }
-
+        
+        if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_PRESS) {
+            gameStateManager.pause();
+            return;
+        }
         if (key == GLFW.GLFW_KEY_A) {
             player.setMovingLeft(action == GLFW.GLFW_PRESS);
         }

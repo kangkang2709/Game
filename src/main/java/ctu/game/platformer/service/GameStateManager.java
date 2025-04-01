@@ -12,11 +12,16 @@ public class GameStateManager implements InputController.KeyEventListener {
 
     private GameState currentState = GameState.HOME;
 
+    private GameState previousState = GameState.HOME;
+
     @Autowired
     private PlatformerSystem platformerSystem;
 
     @Autowired
     private HomeSystem homeSystem;
+
+    @Autowired
+    private PauseSystem pauseSystem;
 
     @Autowired
     private VisualNovelSystem visualNovelSystem;
@@ -27,8 +32,13 @@ public class GameStateManager implements InputController.KeyEventListener {
     @PostConstruct
     private void init() {
         inputController.registerListener(this);
+        pauseSystem.init();
     }
-
+    public void pause() {
+        if (currentState != GameState.PAUSE && currentState != GameState.HOME) {
+            pauseSystem.pause(currentState);
+        }
+    }
     public void update() {
         switch (currentState) {
             case PLATFORM:
@@ -40,8 +50,10 @@ public class GameStateManager implements InputController.KeyEventListener {
             case HOME:
                 homeSystem.update();
                 break;
+            case PAUSE:
+                pauseSystem.update();
+                break;
             default:
-                // Handle other states
                 break;
         }
     }
@@ -58,8 +70,15 @@ public class GameStateManager implements InputController.KeyEventListener {
             case HOME:
                 homeSystem.render();
                 break;
-            default:
-                // Handle other states
+            case PAUSE:
+//                // First render the underlying game state
+//                if (previousState == GameState.PLATFORM) {
+//                    platformerSystem.render();
+//                } else if (previousState == GameState.VISUAL_NOVEL) {
+//                    visualNovelSystem.render();
+//                }
+                // Then overlay the pause menu
+                pauseSystem.render();
                 break;
         }
     }
@@ -84,7 +103,14 @@ public class GameStateManager implements InputController.KeyEventListener {
     }
 
     public void switchState(GameState state) {
-        this.currentState = state;
+        if (currentState == GameState.PAUSE) {
+            // When exiting pause state, don't update previousState
+            currentState = state;
+        } else {
+            previousState = currentState;
+            currentState = state;
+        }
+        System.out.println("Switched to state: " + state);
     }
 
     public GameState getCurrentState() {
