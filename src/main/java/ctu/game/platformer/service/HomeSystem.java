@@ -69,9 +69,9 @@ public class HomeSystem implements InputController.MouseClickListener, InputCont
             menuSelectedTextureIds[i] = -1;
         }
 
-        audioManager.initialize();
-        audioManager.loadBackgroundMusic("background.wav");
-        audioManager.playBackgroundMusic();
+//        audioManager.initialize();
+//        audioManager.loadBackgroundMusic("background.wav");
+//        audioManager.playBackgroundMusic();
 //        audioManager.setVolume(0.3f); // 0.0 (silent) to 1.0 (full)
 
     }

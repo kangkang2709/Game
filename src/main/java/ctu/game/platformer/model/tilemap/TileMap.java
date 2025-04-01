@@ -8,10 +8,7 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class TileMap {
@@ -19,6 +16,7 @@ public class TileMap {
     private int tileSize = 32;
     private int mapWidth;
     private int mapHeight;
+
     private List<MapObject> objects = new ArrayList<>();
     private boolean showCollision = true;
     // Track camera position for culling
@@ -29,93 +27,151 @@ public class TileMap {
     private Map<String, Integer> objectTextures = new HashMap<>();
     private boolean texturesLoaded = false;
 
+    //layer
+    private int[][][] mapLayers;
+    private int layerCount;
+    private boolean[] layerVisible;
+
+
+    private int defaultTextureId = -1;
+
     @PostConstruct
     public void init() {
 
     }
 
     public void loadMap(String filename) {
-        try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("maps/" + filename);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("maps/" + filename);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
 
-            // Read dimensions
+            // Đọc kích thước bản đồ và số layer
             String[] dimensions = reader.readLine().split(",");
             mapWidth = Integer.parseInt(dimensions[0]);
             mapHeight = Integer.parseInt(dimensions[1]);
+            layerCount = (dimensions.length > 2) ? Integer.parseInt(dimensions[2]) : 1;
 
-            // Initialize map array
-            mapData = new int[mapHeight][mapWidth];
+            // Khởi tạo các mảng bản đồ
+            mapLayers = new int[layerCount][mapHeight][mapWidth];
+            mapData = new int[mapHeight][mapWidth]; // Tương thích với code cũ
+            layerVisible = new boolean[layerCount];
+            Arrays.fill(layerVisible, true); // Mặc định tất cả layer hiển thị
 
-            // Read tile data
-            for (int y = 0; y < mapHeight; y++) {
-                String line = reader.readLine();
-                String[] tiles = line.split(",");
-                for (int x = 0; x < mapWidth && x < tiles.length; x++) {
-                    mapData[y][x] = Integer.parseInt(tiles[x]);
+            // Đọc dữ liệu từng layer
+            for (int layer = 0; layer < layerCount; layer++) {
+                for (int y = 0; y < mapHeight; y++) {
+                    String[] tiles = reader.readLine().split(",");
+                    for (int x = 0; x < Math.min(mapWidth, tiles.length); x++) {
+                        int tileValue = Integer.parseInt(tiles[x]);
+                        mapLayers[layer][y][x] = tileValue;
+
+                        // Tương thích với mapData, chỉ ghi đè nếu cần
+                        if (layer == 0 || (isTileSolid(tileValue) && mapData[y][x] == 0)) {
+                            mapData[y][x] = tileValue;
+                        }
+                    }
+                }
+                // Bỏ qua dòng trống giữa các layer (nếu có)
+                if (layer < layerCount - 1) {
+                    reader.readLine();
                 }
             }
 
-            // Read objects if available
-            String objectLine;
-            while ((objectLine = reader.readLine()) != null && !objectLine.trim().isEmpty()) {
-                String[] objData = objectLine.split(",");
-                int type = Integer.parseInt(objData[0]);
-                float x = Float.parseFloat(objData[1]);
-                float y = Float.parseFloat(objData[2]);
+            // Xóa danh sách object cũ trước khi nạp mới
+            objects.clear();
 
-                MapObject object = createObject(type, x, y);
-                if (object != null) {
-                    objects.add(object);
+            // Đọc dữ liệu đối tượng (nếu có)
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 3) {
+                        int type = Integer.parseInt(parts[0]);
+                        float objX = Float.parseFloat(parts[1]);
+                        float objY = Float.parseFloat(parts[2]);
+
+                        MapObject obj = createObject(type, objX, objY);
+                        if (obj != null) {
+                            objects.add(obj);
+                        }
+                    }
                 }
             }
 
-            reader.close();
-            System.out.println("Map loaded: " + filename + " (" + mapWidth + "x" + mapHeight + ")");
         } catch (Exception e) {
             System.err.println("Error loading map: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    private boolean isTileSolid(int tileType) {
+        return tileType == 1 || tileType == 4;
+    }
+    public void setLayerVisible(int layer, boolean visible) {
+        if (layer >= 0 && layer < layerCount) {
+            layerVisible[layer] = visible;
+        }
+    }
+
     private MapObject createObject(int type, float x, float y) {
         switch (type) {
             case 1: // item
-                return new MapObject(x, y, 16, 16, "coin", "level2.csv"); // Set the map filename
+                return new MapObject(x, y, 32, 32, "coin", "level2.csv"); // Set the map filename
             case 2: // Enemy
                 return new MapObject(x, y, 32, 32, "enemy", null);
             default:
                 return null;
         }
     }
+    private void loadTextures() {
+        if (texturesLoaded) return;
 
-    public void render(float playerX, float playerY, int screenWidth, int screenHeight) {
-        // Update camera position to follow player
+        System.out.println("Loading tile and object textures...");
+        long startTime = System.currentTimeMillis();
 
-        if (!texturesLoaded) {
-            try {
-                // Load textures for tiles
-                tileTextures.put(1, TextureManager.loadTexture("maps/tiles/wall.png"));
-                tileTextures.put(2, TextureManager.loadTexture("maps/tiles/grass.png"));
-                tileTextures.put(3, TextureManager.loadTexture("maps/tiles/dirt.png"));
-                tileTextures.put(4, TextureManager.loadTexture("maps/tiles/water.png"));
+        try {
+            // Load default fallback texture once
+            defaultTextureId = TextureManager.loadTexture("maps/tiles/default.png", true);
 
-                // Load textures for objects
-                objectTextures.put("coin", TextureManager.loadTexture("textures/objects/coin.png"));
-                objectTextures.put("enemy", TextureManager.loadTexture("textures/objects/enemy.png"));
+            // Batch load all tile textures at once
+            Map<String, Integer> tileTextureFiles = new HashMap<>();
+            tileTextureFiles.put("maps/tiles/wall.png", 1);
+            tileTextureFiles.put("maps/tiles/grass.png", 2);
+            tileTextureFiles.put("maps/tiles/dirt.png", 3);
+            tileTextureFiles.put("maps/tiles/water.png", 4);
 
-                texturesLoaded = true;
-            } catch (Exception e) {
-                System.err.println("Error initializing textures: " + e.getMessage());
-                e.printStackTrace();
-            }
+            // Use parallel stream for batch loading if many textures
+            tileTextureFiles.forEach((path, id) -> {
+                try {
+                    int textureId = TextureManager.loadTexture(path, true); // true = cache the texture
+                    tileTextures.put(id, textureId);
+                } catch (Exception e) {
+                    System.err.println("Failed to load tile texture " + path + ": " + e.getMessage());
+                    tileTextures.put(id, defaultTextureId); // Use fallback texture
+                }
+            });
+
+            // Batch load object textures
+            objectTextures.put("coin", TextureManager.loadTexture("textures/objects/coin.png", true));
+            objectTextures.put("enemy", TextureManager.loadTexture("textures/objects/enemy.png", true));
+
+            texturesLoaded = true;
+            long endTime = System.currentTimeMillis();
+            System.out.println("Textures loaded in " + (endTime - startTime) + "ms");
+        } catch (Exception e) {
+            System.err.println("Error initializing textures: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+    public void render(float playerX, float playerY, int screenWidth, int screenHeight) {
+        // Update camera position
+        if (!texturesLoaded) {
+            loadTextures();
+        }
+
 
         cameraX = playerX;
         cameraY = playerY;
-
-        // Check if player reached the specific point to change the map
-        checkPlayerPosition(playerX, playerY);
 
         // Calculate visible area
         int startTileX = Math.max(0, (int)((cameraX - screenWidth/2) / tileSize));
@@ -125,46 +181,37 @@ public class TileMap {
 
         // Enable texturing
         GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Reset color to not tint textures
+        GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-        // Render visible tiles
-        for (int y = startTileY; y < endTileY; y++) {
-            for (int x = startTileX; x < endTileX; x++) {
-                int tileType = mapData[y][x];
-                if (tileType == 0) continue;
+        // Render each layer
+        for (int layer = 0; layer < layerCount; layer++) {
+            for (int y = startTileY; y < endTileY; y++) {
+                for (int x = startTileX; x < endTileX; x++) {
+                    int tileType = mapLayers[layer][y][x];
+                    if (tileType == 0) continue;
 
-                float drawX = x * tileSize;
-                float drawY = y * tileSize;
+                    float drawX = x * tileSize;
+                    float drawY = y * tileSize;
 
-                // Draw tile based on type
-                renderTile(tileType, drawX, drawY);
+                    renderTile(tileType, drawX, drawY);
 
-                // Draw collision box if enabled and tile is solid
-                if (showCollision && (tileType == 1 || tileType == 4)) {
-                    renderCollisionBox(drawX, drawY, tileSize, tileSize);
+                    // Only show collision on the collision layer (typically first layer)
+                    if (showCollision && layer == 0 && isTileSolid(tileType)) {
+                        renderCollisionBox(drawX, drawY, tileSize, tileSize);
+                    }
                 }
             }
         }
 
-        // Render visible objects
-        for (MapObject obj : objects) {
-            float objX = obj.getX();
-            float objY = obj.getY();
 
-            // Only render objects close to the player
-            if (Math.abs(objX - playerX) < screenWidth/2 + tileSize &&
-                    Math.abs(objY - playerY) < screenHeight/2 + tileSize) {
-                renderObject(obj);
-
-                // Draw collision boxes for objects if enabled
-                if (showCollision) {
-                    renderCollisionBox(obj.getX(), obj.getY(), obj.getWidth(), obj.getHeight());
-                }
-            }
-        }
-
-        // Disable texturing when done
+        renderObjects();
         GL11.glDisable(GL11.GL_TEXTURE_2D);
+    }
+
+    private void renderObjects() {
+        for (MapObject obj : objects) {
+            renderObject(obj, obj.getX(), obj.getY());
+        }
     }
 
     private void checkPlayerPosition(float playerX, float playerY) {
@@ -179,7 +226,11 @@ public class TileMap {
             }
         }
     }
+    // Add this method to your TileMap class
 
+    private Integer getObjectTexture(String objectType) {
+        return objectTextures.get(objectType);
+    }
     private void renderTile(int tileType, float x, float y) {
         // Bind the appropriate texture based on tile type
         Integer textureId = tileTextures.get(tileType);
@@ -231,33 +282,55 @@ public class TileMap {
         GL11.glColor4f(currentColor[0], currentColor[1], currentColor[2], currentColor[3]);
     }
 
-    private void renderObject(MapObject obj) {
+    private void renderObject(MapObject obj, float screenX, float screenY) {
         // Bind the appropriate texture based on object type
-        Integer textureId = objectTextures.get(obj.getType());
+        Integer textureId = getObjectTexture(obj.getType());
         if (textureId != null) {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+
+            // Draw object as a textured quad
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glTexCoord2f(0, 0); GL11.glVertex2f(screenX, screenY);
+            GL11.glTexCoord2f(1, 0); GL11.glVertex2f(screenX + obj.getWidth(), screenY);
+            GL11.glTexCoord2f(1, 1); GL11.glVertex2f(screenX + obj.getWidth(), screenY + obj.getHeight());
+            GL11.glTexCoord2f(0, 1); GL11.glVertex2f(screenX, screenY + obj.getHeight());
+            GL11.glEnd();
         } else {
             // Fallback to colored rectangles if texture not found
             GL11.glDisable(GL11.GL_TEXTURE_2D);
+
             if ("coin".equals(obj.getType())) {
-                GL11.glColor3f(1.0f, 1.0f, 0.0f); // Yellow
+                GL11.glColor3f(1.0f, 1.0f, 0.0f);  // Yellow for coins
             } else if ("enemy".equals(obj.getType())) {
-                GL11.glColor3f(1.0f, 0.0f, 0.0f); // Red
+                GL11.glColor3f(1.0f, 0.0f, 0.0f);  // Red for enemies
+            } else {
+                GL11.glColor3f(0.8f, 0.8f, 0.8f);  // Default gray
             }
+
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glVertex2f(screenX, screenY);
+            GL11.glVertex2f(screenX + obj.getWidth(), screenY);
+            GL11.glVertex2f(screenX + obj.getWidth(), screenY + obj.getHeight());
+            GL11.glVertex2f(screenX, screenY + obj.getHeight());
+            GL11.glEnd();
+
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glColor3f(1.0f, 1.0f, 1.0f);  // Reset color
         }
 
-        // Draw object as a textured quad
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0, 0); GL11.glVertex2f(obj.getX(), obj.getY());
-        GL11.glTexCoord2f(1, 0); GL11.glVertex2f(obj.getX() + obj.getWidth(), obj.getY());
-        GL11.glTexCoord2f(1, 1); GL11.glVertex2f(obj.getX() + obj.getWidth(), obj.getY() + obj.getHeight());
-        GL11.glTexCoord2f(0, 1); GL11.glVertex2f(obj.getX(), obj.getY() + obj.getHeight());
-        GL11.glEnd();
-
-        // Re-enable texturing if it was disabled
-        if (textureId == null) {
+        // Optionally render debug outline
+        if (showCollision) {
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glColor3f(0.0f, 1.0f, 1.0f);  // Cyan
+            GL11.glLineWidth(1.5f);
+            GL11.glBegin(GL11.GL_LINE_LOOP);
+            GL11.glVertex2f(screenX, screenY);
+            GL11.glVertex2f(screenX + obj.getWidth(), screenY);
+            GL11.glVertex2f(screenX + obj.getWidth(), screenY + obj.getHeight());
+            GL11.glVertex2f(screenX, screenY + obj.getHeight());
+            GL11.glEnd();
             GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL11.glColor3f(1.0f, 1.0f, 1.0f); // Reset color
+            GL11.glColor3f(1.0f, 1.0f, 1.0f);  // Reset color
         }
     }
 
@@ -270,9 +343,15 @@ public class TileMap {
             return true; // Out of bounds is solid
         }
 
-        // Consider specific tile types as solid
-        int tileType = mapData[tileY][tileX];
-        return tileType == 1 || tileType == 4; // Wall and water are solid
+        // Look for solid tiles in any layer
+        for (int layer = 0; layer < layerCount; layer++) {
+            int tileType = mapLayers[layer][tileY][tileX];
+            if (isTileSolid(tileType)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Getters
