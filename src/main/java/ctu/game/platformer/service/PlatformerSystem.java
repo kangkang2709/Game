@@ -78,13 +78,16 @@ public class PlatformerSystem {
         LevelData currentLevel = levelManager.getLevelData(currentLevelId);
         for (TransitionPoint tp : currentLevel.getTransitions().values()) {
             if (Math.abs(playerX - tp.getX()) < playerWidth && Math.abs(playerY - tp.getY()) < playerHeight) {
+
                 levelManager.loadLevel(tp.getTargetLevel());
+
                 float[] startPos = levelManager.getPlayerStartPosition();
                 player.setPosition(startPos[0], startPos[1]);
                 break;
             }
         }
     }
+
     public void render() {
         GL11.glPushMatrix();
 

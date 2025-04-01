@@ -20,7 +20,7 @@ public class TileMap {
     // Map properties
     private int mapWidth;
     private int mapHeight;
-    private int[][][] mapLayers;
+    private byte[][][] mapLayers;
     private int layerCount;
     private boolean[] layerVisible;
 
@@ -80,7 +80,7 @@ public class TileMap {
 
     private void initializeMapData() {
         // Initialize map arrays
-        mapLayers = new int[layerCount][mapHeight][mapWidth];
+        mapLayers = new byte[layerCount][mapHeight][mapWidth];
         layerVisible = new boolean[layerCount];
         Arrays.fill(layerVisible, true);
 
@@ -101,7 +101,7 @@ public class TileMap {
 
                 String[] tiles = line.split(",");
                 for (int x = 0; x < Math.min(mapWidth, tiles.length); x++) {
-                    mapLayers[layer][y][x] = Integer.parseInt(tiles[x]);
+                    mapLayers[layer][y][x] = (byte) Integer.parseInt(tiles[x]);
                 }
             }
 
@@ -211,10 +211,10 @@ public class TileMap {
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, backgroundTextureId);
             GL11.glBegin(GL11.GL_QUADS);
-            GL11.glTexCoord2f(0, 0); GL11.glVertex2f(0, 0);
-            GL11.glTexCoord2f(1, 0); GL11.glVertex2f(screenWidth, 0);
-            GL11.glTexCoord2f(1, 1); GL11.glVertex2f(screenWidth, screenHeight);
-            GL11.glTexCoord2f(0, 1); GL11.glVertex2f(0, screenHeight);
+            GL11.glTexCoord2f(0, 0); GL11.glVertex2f(offsetX, offsetY);
+            GL11.glTexCoord2f(1, 0); GL11.glVertex2f(offsetX + screenWidth, offsetY);
+            GL11.glTexCoord2f(1, 1); GL11.glVertex2f(offsetX + screenWidth, offsetY + screenHeight);
+            GL11.glTexCoord2f(0, 1); GL11.glVertex2f(offsetX, offsetY + screenHeight);
             GL11.glEnd();
             GL11.glDisable(GL11.GL_TEXTURE_2D);
 
@@ -223,7 +223,7 @@ public class TileMap {
         }
     }
 
-    private void loadTextures() {
+    public void loadTextures() {
         if (texturesLoaded) return;
 
         System.out.println("Loading tile and object textures...");
@@ -240,22 +240,24 @@ public class TileMap {
 
             // Load all textures
             tileTextureFiles.forEach((path, id) -> {
-                try {
-                    int textureId = TextureManager.loadTexture(path, true);
-                    tileTextures.put(id, textureId);
-                } catch (Exception e) {
-                    System.err.println("Failed to load tile texture " + path + ": " + e.getMessage());
-                    if (defaultTextureId != -1) {
-                        tileTextures.put(id, defaultTextureId);
+                if (!tileTextures.containsKey(id)) {
+                    try {
+                        int textureId = TextureManager.loadTexture(path, true);
+                        tileTextures.put(id, textureId);
+                    } catch (Exception e) {
+                        System.err.println("Failed to load tile texture " + path + ": " + e.getMessage());
+                        if (defaultTextureId != -1) {
+                            tileTextures.put(id, defaultTextureId);
+                        }
                     }
                 }
             });
 
             // Batch load object textures
-            objectTextures.put("coin", TextureManager.loadTexture("textures/objects/coin.png", true));
-            objectTextures.put("enemy", TextureManager.loadTexture("textures/objects/enemy.png", true));
-            objectTextures.put("layerportal", TextureManager.loadTexture("textures/objects/layerportal.png", true));
-            objectTextures.put("layerreturn", TextureManager.loadTexture("textures/objects/layerreturn.png", true));
+            loadObjectTexture("coin", "textures/objects/coin.png");
+            loadObjectTexture("enemy", "textures/objects/enemy.png");
+            loadObjectTexture("layerportal", "textures/objects/layerportal.png");
+            loadObjectTexture("layerreturn", "textures/objects/layerreturn.png");
 
             texturesLoaded = true;
             long endTime = System.currentTimeMillis();
@@ -264,6 +266,29 @@ public class TileMap {
             System.err.println("Error initializing textures: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void loadObjectTexture(String key, String path) {
+        if (!objectTextures.containsKey(key)) {
+            try {
+                int textureId = TextureManager.loadTexture(path, true);
+                objectTextures.put(key, textureId);
+            } catch (Exception e) {
+                System.err.println("Failed to load object texture " + path + ": " + e.getMessage());
+            }
+        }
+    }
+
+    public void unloadUnusedTextures() {
+        // Remove unused tile textures
+        tileTextures.values().forEach(GL11::glDeleteTextures);
+        tileTextures.clear();
+
+        // Remove unused object textures
+        objectTextures.values().forEach(GL11::glDeleteTextures);
+        objectTextures.clear();
+
+        texturesLoaded = false;
     }
 
     private void renderTile(int tileType, float x, float y) {
