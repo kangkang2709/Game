@@ -182,13 +182,13 @@ public class VisualNovelSystem {
     }
 
     private void renderDialogue(Dialog dialogue) {
-        int dialogBoxHeight = 150;
+        int dialogBoxHeight = 250;
         int dialogBoxY = screenHeight - dialogBoxHeight - 20;
 
         // Render character name
-        fontRenderer.renderText(dialogue.getCharacterName(), 70, dialogBoxY + 30, 18, 1.0f, 1.0f, 1.0f);
+        fontRenderer.renderText(dialogue.getCharacterName(), 70, dialogBoxY + 30, 0.9f, 1.0f, 1.0f, 1.0f);
         // Render dialogue text
-        fontRenderer.renderWrappedText(dialogue.getText(), 70, dialogBoxY + 60, screenWidth - 120, 16, 0.9f, 0.9f, 0.9f);
+        fontRenderer.renderWrappedText(dialogue.getText(), 70, dialogBoxY + 60, screenWidth - 120, 0.9f, 0.9f, 0.9f, 0.9f);
 
         // Render "click to continue" indicator
         if (getCurrentScene().getDialogues().size() > currentDialogueIndex + 1) {
@@ -222,7 +222,7 @@ public class VisualNovelSystem {
             GL11.glDisable(GL11.GL_TEXTURE_2D);
 
 
-            fontRenderer.renderCenteredText(choice.getText(), screenWidth/2, y + height/2 - 8, 16,
+            fontRenderer.renderCenteredText(choice.getText(), screenWidth/2, y + height/2 - 8, 0.85f,
                     isSelected ? 1.0f : 0.8f,
                     isSelected ? 1.0f : 0.8f,
                     isSelected ? 1.0f : 0.8f);
