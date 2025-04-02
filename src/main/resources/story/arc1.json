@@ -33,6 +33,12 @@
               "sanity_change": 0
             },
             {
+              "text": " tiến về căn hộ.",
+              "next_scene": "scene_02",
+              "required_item": null,
+              "sanity_change": 0
+            },
+            {
               "text": "Dừng lại và kiểm tra tin nhắn lần nữa.",
               "next_scene": "scene_03",
               "required_item": null,
