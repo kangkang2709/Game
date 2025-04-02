@@ -149,22 +149,37 @@ public class TileMap {
             loadTextures();
         }
         renderBackground(playerX, playerY, screenWidth, screenHeight);
+
+
+        //mapWidth * TILE_SIZE: Tổng chiều rộng của bản đồ (số ô gạch × kích thước mỗi ô).
+        //Đảm bảo rằng camera không vượt quá ranh giới bên phải của bản đồ.
+        //Tức là camera có thể di chuyển từ (0,0) đến (maxCameraX, maxCameraY).
         float maxCameraX = mapWidth * TILE_SIZE - screenWidth;
         float maxCameraY = mapHeight * TILE_SIZE - screenHeight;
 
-        // Calculate target camera position (without centering player)
+        //Xác định vị trí camera dựa trên vị trí của người chơi.
+        //targetCameraX và targetCameraY là vị trí mà camera nên di chuyển đến.
+        //playerX - screenWidth / 4 : Camera đặt một phần tư màn hình về phía trước người chơi theo trục X (tạo cảm giác người chơi nhìn về phía trước).
+        //playerY - screenHeight / 2: Camera đặt người chơi vào giữa màn hình theo trục Y.
+        //Đảm bảo camera không đi quá biên.
         float targetCameraX = Math.max(0, Math.min(playerX - screenWidth / 4, maxCameraX));
         float targetCameraY = Math.max(0, Math.min(playerY - screenHeight / 2, maxCameraY));
 
         // Apply simple smoothing
+        //Làm mượt chuyển động của camera bằng cách không di chuyển ngay lập tức đến vị trí mong muốn, mà dần dần dịch chuyển.
+        //SMOOTHING_FACTOR (hệ số làm mượt, ví dụ 0.1 ~ 0.2) giúp camera di chuyển dần dần thay vì nhảy ngay đến targetCameraX và targetCameraY.
         cameraX = cameraX + (targetCameraX - cameraX) * SMOOTHING_FACTOR;
         cameraY = cameraY + (targetCameraY - cameraY) * SMOOTHING_FACTOR;
 
-        // Ensure camera bounds
+        //Giới hạn camera sau khi làm mượt
         cameraX = Math.max(0, Math.min(cameraX, maxCameraX));
         cameraY = Math.max(0, Math.min(cameraY, maxCameraY));
 
-        // Calculate visible tiles for culling
+        // Chỉ vẽ các tile  nằm trong phạm vi nhìn thấy của camera.
+        //cameraX / TILE_SIZE: Xác định ô gạch đầu tiên mà camera nhìn thấy.
+       // (cameraX + screenWidth) / TILE_SIZE: Xác định ô gạch cuối cùng mà camera nhìn thấy.
+        //Math.max(0, ...) và Math.min(mapWidth, ...): Đảm bảo không vẽ ngoài phạm vi bản đồ.
+
         int startTileX = Math.max(0, (int)(cameraX / TILE_SIZE));
         int endTileX = Math.min(mapWidth, (int)((cameraX + screenWidth) / TILE_SIZE) + 1);
         int startTileY = Math.max(0, (int)(cameraY / TILE_SIZE));

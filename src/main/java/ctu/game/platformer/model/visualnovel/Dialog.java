@@ -1,15 +1,22 @@
 // src/main/java/ctu/game/flatformer/model/visualnovel/Dialog.java
 package ctu.game.platformer.model.visualnovel;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Dialog {
     private String text;
-    private String characterName;
+
+    @JsonProperty("character")
+    private String character;
     private String characterImage;
 
     public Dialog(String text, String characterName, String characterImage) {
         this.text = text;
-        this.characterName = characterName;
+        this.character = characterName;
         this.characterImage = characterImage;
+    }
+
+    public Dialog() {
+
     }
 
     public String getText() {
@@ -17,10 +24,13 @@ public class Dialog {
     }
 
     public String getCharacterName() {
-        return characterName;
+        return character;
     }
 
     public String getCharacterImage() {
         return characterImage;
+    }
+    public void setText(String text) {
+        this.text = text;
     }
 }

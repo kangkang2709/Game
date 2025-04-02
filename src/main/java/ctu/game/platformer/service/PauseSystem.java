@@ -277,7 +277,7 @@ public class PauseSystem implements InputController.KeyEventListener, InputContr
             System.out.println("Releasing PauseSystem resources");
 
             if (backgroundTextureId > 0) {
-                GL11.glDeleteTextures(backgroundTextureId);
+//                GL11.glDeleteTextures(backgroundTextureId);
                 backgroundTextureId = -1;
             }
 
